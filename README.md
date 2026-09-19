@@ -155,8 +155,12 @@ repository; no server, no laptop, nothing to run by hand.
 
 The script rebuilds a period **only** when it has no report yet or when a deal
 landed in it since the last build, so an unchanged week produces no commit and
-no republished page. **[SETUP_GITHUB.md](SETUP_GITHUB.md)** is the step-by-step
-setup guide, written for someone who has never used GitHub.
+no republished page.
+
+To run it on your own fork: make the repository public (Actions minutes and
+Pages are free there), set **Settings → Actions → General → Workflow
+permissions** to *Read and write*, and set **Settings → Pages → Source** to
+*GitHub Actions*. Then trigger the workflow once from the Actions tab.
 
 ```bash
 python scripts/weekly_update.py                 # what the cron runs
@@ -173,7 +177,7 @@ run.py                 entry point: boots the web app + scheduler
 config.py              env-driven config + fail-fast prod validation
 publish_site.py        build the public static site (24IB-Private-Market-Research/)
 scripts/weekly_update.py   unattended weekly run: scrape → generate → publish
-.github/workflows/     GitHub Actions cron that runs the above (see SETUP_GITHUB.md)
+.github/workflows/     GitHub Actions cron that runs the above every Monday
 24IB-Private-Market-Research/   published static site: report pages + indexes
 instance/              runtime data: SQLite db + canonical Inc42 master workbook
 intelligence/

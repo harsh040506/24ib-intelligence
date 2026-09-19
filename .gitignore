@@ -9,6 +9,11 @@
 # Local secrets — never commit these.
 .env
 
+# Personal setup notes. Kept on disk, deliberately not published: it is a
+# beginner's walkthrough written for one person and contains local machine
+# paths, which are of no use to anyone reading the public repository.
+SETUP_GITHUB.md
+
 # Generated PDF/CSV exports. Recreated on demand, no need to version them.
 instance/exports/
 
