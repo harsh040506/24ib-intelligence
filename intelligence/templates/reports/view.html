@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% set active = 'reports' %}
+{% block title %}{{ report.title }} · {{ brand }}{% endblock %}
+{% block head %}
+<style>
+  .report-frame-wrap { background: #fdfbf7; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); position: relative; }
+  .report-frame { width: 100%; height: calc(100vh - 150px); min-height: 520px; border: 0; display: block; }
+  .frame-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #fdfbf7; color: var(--dust); font-size: var(--text-sm); gap: 8px; }
+  .frame-loading[hidden] { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-actions" style="display:flex; gap:var(--sp-3); align-items:center; margin-bottom:var(--sp-4); flex-wrap:wrap;">
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}"><i class="ph ph-arrow-left" aria-hidden="true"></i> All reports</a>
+  <span class="badge badge-{{ 'green' if report.status.value=='ready' else 'amber' }}">{{ report.status.value }}</span>
+  {% if report.period_type.value in ('weekly','monthly') %}
+  <span class="badge badge-{{ 'green' if report.is_published else 'gray' }}"
+        title="{{ 'Live on the public site' if report.is_published else 'Not on the public site' }}">
+    {{ 'published' if report.is_published else 'draft' }}
+  </span>
+  {% endif %}
+  <span class="muted" style="font-size:var(--text-sm)">{{ report.title }}</span>
+
+  <div style="margin-left:auto; display:flex; gap:var(--sp-2); flex-wrap:wrap;">
+    <form method="post" action="{{ url_for('explore.toggle_favorite') }}">
+      <input type="hidden" name="kind" value="report">
+      <input type="hidden" name="ref" value="{{ report.id }}">
+      <input type="hidden" name="label" value="{{ report.title }}">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <button class="btn {{ 'btn-ghost' if is_favorite else 'btn-primary' }} btn-sm" type="submit">
+        <i class="ph ph-star{{ '-fill' if is_favorite }}" aria-hidden="true"></i> {{ 'Pinned' if is_favorite else 'Pin' }}
+      </button>
+    </form>
+
+    {% if prev_report %}
+    <a class="btn btn-sm" href="{{ url_for('reports.compare', a=prev_report.id, b=report.id) }}">
+      <i class="ph ph-arrows-left-right" aria-hidden="true"></i> Compare to previous
+    </a>
+    {% endif %}
+
+    {% if report.period_type.value in ('weekly','monthly') %}
+      {% if report.is_published %}
+      <form method="post" action="{{ url_for('reports.unpublish', report_id=report.id) }}"
+            data-confirm="Remove this edition from the public site? The page is deleted and neighbouring reports are relinked."
+            data-busy="Unpublishing…">
+        <button class="btn btn-ghost btn-sm" type="submit"><i class="ph ph-eye-slash" aria-hidden="true"></i> Unpublish</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('reports.publish', report_id=report.id) }}" data-busy="Publishing…">
+        <button class="btn btn-sm" type="submit"><i class="ph ph-globe" aria-hidden="true"></i> Publish</button>
+      </form>
+      {% endif %}
+    {% endif %}
+
+    <form method="post" action="{{ url_for('reports.regenerate', report_id=report.id) }}"
+          data-busy="Regenerating…">
+      <button class="btn btn-sm" type="submit"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Regenerate</button>
+    </form>
+    <a class="btn btn-sm" target="_blank" rel="noopener" href="{{ url_for('reports.share', token=report.share_token) }}"><i class="ph ph-arrow-square-out" aria-hidden="true"></i> Open full</a>
+    <a class="btn btn-sm" href="{{ url_for('reports.pdf', report_id=report.id) }}"><i class="ph ph-file-pdf" aria-hidden="true"></i> Export PDF</a>
+    <a class="btn btn-sm" href="{{ url_for('reports.html', report_id=report.id) }}"><i class="ph ph-file-html" aria-hidden="true"></i> Export HTML</a>
+    <button class="btn btn-sm" type="button" id="copyShare"
+            data-url="{{ url_for('reports.share', token=report.share_token, _external=True) }}">
+      <i class="ph ph-link-simple" aria-hidden="true"></i> Copy share link
+    </button>
+  </div>
+</div>
+
+{% if report.status.value == 'ready' %}
+  <div class="report-frame-wrap">
+    <div class="frame-loading" id="frameLoading"><span class="spinner" aria-hidden="true"></span> Loading report…</div>
+    <iframe class="report-frame" src="{{ url_for('reports.share', token=report.share_token) }}"
+            title="{{ report.title }}" loading="lazy"
+            onload="document.getElementById('frameLoading').hidden = true"></iframe>
+  </div>
+
+  <div class="card" style="margin-top:var(--sp-5)">
+    <div class="eyebrow" style="margin-bottom:var(--sp-3)">Your notes on this edition</div>
+    <form method="post" action="{{ url_for('reports.save_notes', report_id=report.id) }}"
+          data-busy="Saving…" data-dirty-guard>
+      <label class="sr-only" for="report-notes">Notes on {{ report.title }}</label>
+      <textarea class="input" id="report-notes" name="notes" rows="4" maxlength="20000"
+                placeholder="Private notes — takeaways, follow-ups, things to check next time…"
+                style="width:100%;resize:vertical;font-family:var(--font-sans)">{{ report.notes }}</textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:var(--sp-3)">
+        <button class="btn btn-sm" type="submit"><i class="ph ph-floppy-disk" aria-hidden="true"></i> Save notes</button>
+        <span class="muted" style="font-size:var(--text-xs)">
+          {% if report.notes %}Saved · {{ report.notes|length }} characters{% else %}Not saved anywhere else — these notes stay in your workspace.{% endif %}
+        </span>
+      </div>
+    </form>
+  </div>
+{% elif report.status.value == 'failed' %}
+  <div class="empty">
+    <h3>This report failed to generate</h3>
+    <p>{{ report.error or 'The engine raised an error while building this edition.' }}</p>
+    <form method="post" action="{{ url_for('reports.regenerate', report_id=report.id) }}" data-busy="Retrying…" style="margin-top:16px">
+      <button class="btn btn-primary" type="submit"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Try again</button>
+    </form>
+  </div>
+{% else %}
+  <div class="empty">
+    <h3>Report not ready</h3>
+    <p>This edition has not been generated yet.</p>
+    <form method="post" action="{{ url_for('reports.regenerate', report_id=report.id) }}" data-busy="Generating…" style="margin-top:16px">
+      <button class="btn btn-primary" type="submit"><i class="ph ph-lightning" aria-hidden="true"></i> Generate now</button>
+    </form>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('copyShare').addEventListener('click', function () {
+    const btn = this;
+    const done = () => {
+      const original = btn.innerHTML;
+      btn.innerHTML = '<i class="ph ph-check"></i> Copied';
+      setTimeout(() => { btn.innerHTML = original; }, 1600);
+    };
+    // navigator.clipboard needs a secure context; fall back to prompt() so the
+    // link is still obtainable over plain http on a LAN address.
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(btn.dataset.url).then(done, () => window.prompt('Copy this link:', btn.dataset.url));
+    } else {
+      window.prompt('Copy this link:', btn.dataset.url);
+    }
+  });
+</script>
+{% endblock %}

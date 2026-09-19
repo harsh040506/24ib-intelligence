@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Compare reports · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">Compare</div><h1 class="page-title">Compare two periods</h1>
+  <p class="page-sub">Pick a baseline and a comparison period to see what changed.</p>
+</div></div>
+
+<div class="card" style="max-width:720px;margin-bottom:var(--sp-6)">
+  <form method="get" style="display:flex;gap:var(--sp-4);align-items:end;flex-wrap:wrap">
+    <div class="field" style="flex:1;min-width:200px">
+      <label>Baseline (A)</label>
+      <select class="input" name="a">
+        <option value="">— choose —</option>
+        {% for pt, items in by_type.items() %}
+          {% for r in items %}
+          <option value="{{ r.id }}" {{ 'selected' if a and a.id==r.id }}>{{ pt|capitalize }} · {{ r.period_key }} — {{ r.title }}</option>
+          {% endfor %}
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field" style="flex:1;min-width:200px">
+      <label>Comparison (B)</label>
+      <select class="input" name="b">
+        <option value="">— choose —</option>
+        {% for pt, items in by_type.items() %}
+          {% for r in items %}
+          <option value="{{ r.id }}" {{ 'selected' if b and b.id==r.id }}>{{ pt|capitalize }} · {{ r.period_key }} — {{ r.title }}</option>
+          {% endfor %}
+        {% endfor %}
+      </select>
+    </div>
+    <button class="btn btn-primary" type="submit"><i class="ph ph-arrows-left-right"></i> Compare</button>
+  </form>
+</div>
+
+{% if diff %}
+<div class="card" style="margin-bottom:var(--sp-6)">
+  <div class="eyebrow" style="margin-bottom:var(--sp-3)">Headline · {{ a.period_key }} → {{ b.period_key }}</div>
+  <table class="table">
+    <thead><tr><th>Metric</th><th class="num">{{ a.period_key }}</th><th class="num">{{ b.period_key }}</th><th class="num">Change</th></tr></thead>
+    <tbody>
+      {% for row in diff.headline %}
+      <tr>
+        <td>{{ row.label }}</td>
+        <td class="num">{{ row.a|num(1) }}</td>
+        <td class="num">{{ row.b|num(1) }}</td>
+        <td class="num {{ row.delta|retclass }}">{{ row.delta|ret }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="padding:0">
+  <div class="eyebrow" style="margin:var(--sp-5) var(--sp-5) var(--sp-3)">Capital by sector</div>
+  <table class="table">
+    <thead><tr><th>Sector</th><th class="num">{{ a.period_key }}</th><th class="num">{{ b.period_key }}</th><th class="num">Change</th></tr></thead>
+    <tbody>
+      {% for row in diff.sectors %}
+      <tr>
+        <td>{{ row.name }}</td>
+        <td class="num">${{ row.amt_a|num(1) }}M · {{ row.deals_a }} deals</td>
+        <td class="num">${{ row.amt_b|num(1) }}M · {{ row.deals_b }} deals</td>
+        <td class="num {{ row.delta|retclass }}">{{ row.delta|ret }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif request.args.get('a') or request.args.get('b') %}
+<div class="empty"><h3>Pick two reports</h3><p>Choose a baseline and a comparison period above.</p></div>
+{% endif %}
+{% endblock %}

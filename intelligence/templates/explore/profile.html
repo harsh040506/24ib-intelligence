@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}{{ name }} · {{ brand }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/report.css') }}">
+{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">{{ kind|capitalize }}</div>
+    <h1 class="page-title">{{ name }}</h1>
+    <p class="page-sub">
+      {{ stats.count }} deal{{ '' if stats.count == 1 else 's' }} · {{ stats.total_label }} total
+      {% if stats.first %}· {{ stats.first.strftime('%b %Y') }} – {{ stats.last.strftime('%b %Y') }}{% endif %}
+    </p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('data.index', q=name) }}">
+      <i class="ph ph-database" aria-hidden="true"></i> In data table
+    </a>
+    <form method="post" action="{{ url_for('explore.toggle_favorite') }}">
+      <input type="hidden" name="kind" value="{{ kind }}">
+      <input type="hidden" name="ref" value="{{ name }}">
+      <input type="hidden" name="label" value="{{ name }}">
+      <input type="hidden" name="next" value="{{ request.full_path }}">
+      <button class="btn {{ 'btn-ghost' if is_favorite else 'btn-primary' }} btn-sm" type="submit">
+        <i class="ph ph-star{{ '-fill' if is_favorite }}" aria-hidden="true"></i> {{ 'Pinned' if is_favorite else 'Pin' }}
+      </button>
+    </form>
+  </div>
+</div>
+
+{% if not deals %}
+<div class="empty">
+  <h3>No deals recorded yet</h3>
+  <p>Nothing in this {{ kind }} so far. It will appear here as soon as a matching deal is imported.</p>
+  <a class="btn btn-primary" style="margin-top:16px" href="{{ url_for('data.index') }}">Go to data</a>
+</div>
+{% else %}
+
+{% if trend %}
+<div class="card" style="margin-bottom:var(--sp-6)">
+  <div class="eyebrow" style="margin-bottom:var(--sp-4)">Monthly momentum · capital raised</div>
+  {% set maxamt = trend|map(attribute='amt')|max %}
+  <div class="table-wrap">
+    <div class="barchart" style="min-width:{{ trend|length * 42 }}px" role="img"
+         aria-label="Capital by month for {{ name }}: {% for t in trend %}{{ t.label }} ${{ t.amt }}M{{ '; ' if not loop.last }}{% endfor %}">
+      {% for t in trend %}
+      <div class="bar-col">
+        <div class="bar-fill" style="height:{{ (t.amt / maxamt * 100) if maxamt else 0 }}%">
+          <span class="bar-count">{{ t.deals }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="bar-xlabels" style="min-width:{{ trend|length * 42 }}px">
+      {% for t in trend %}<span>{{ t.label }}</span>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card" style="padding:0">
+  <div class="table-wrap">
+    <table class="table">
+      <caption class="sr-only">Deals for {{ name }}</caption>
+      <thead><tr>
+        <th>Date</th>
+        {% if kind != 'company' %}<th>Company</th>{% endif %}
+        {% if kind != 'sector' %}<th>Sector</th>{% endif %}
+        <th class="num">Amount</th><th>Round</th>
+        {% if kind != 'investor' %}<th>Investors</th>{% endif %}
+      </tr></thead>
+      <tbody>
+        {% for d in deals %}
+        <tr>
+          <td class="muted nowrap">{{ d.deal_date.strftime('%d-%b-%y') }}</td>
+          {% if kind != 'company' %}<td style="font-weight:600"><a href="{{ url_for('explore.company', name=d.company_name) }}">{{ d.company_name }}</a></td>{% endif %}
+          {% if kind != 'sector' %}<td><a class="badge badge-gray" href="{{ url_for('explore.sector', name=d.sector_canonical) }}">{{ d.sector_canonical }}</a></td>{% endif %}
+          <td class="num nowrap">{{ d.funding_round_size or '$%sM'|format(d.amount_usd_mn) }}</td>
+          <td class="muted">{{ d.round_type or '—' }}</td>
+          {% if kind != 'investor' %}<td class="muted">{{ d.investors_raw or '—' }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="pager" aria-label="Deal pages">
+  {% if pagination.page > 1 %}
+  <a class="btn btn-sm" rel="prev" href="{{ url_for(request.endpoint, name=name, page=pagination.page - 1) }}">← Prev</a>
+  {% endif %}
+  <span class="btn btn-sm btn-ghost" aria-current="page">Page {{ pagination.page }} / {{ pagination.pages }}</span>
+  {% if pagination.page < pagination.pages %}
+  <a class="btn btn-sm" rel="next" href="{{ url_for(request.endpoint, name=name, page=pagination.page + 1) }}">Next →</a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endif %}
+{% endblock %}

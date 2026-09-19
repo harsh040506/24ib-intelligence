@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Activity · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Observability</div><h1 class="page-title">Activity & Runs</h1>
+  <p class="page-sub">Every ingestion and report-generation job, with logs.</p></div>
+</div>
+
+{% if runs %}
+<div class="card" style="padding:0">
+  <table class="table">
+    <thead><tr><th>Job</th><th>Status</th><th>Detail</th><th>Started</th><th>Duration</th></tr></thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td><span class="mono">{{ r.kind }}</span></td>
+        <td><span class="badge badge-{{ {'success':'green','failed':'red','running':'amber','queued':'gray'}[r.status.value] }}">{{ r.status.value }}</span></td>
+        <td class="muted">{{ r.detail }}</td>
+        <td class="muted">{{ r.started_at.strftime('%d %b %H:%M') }}</td>
+        <td class="muted">{% if r.finished_at %}{{ '%.1fs'|format((r.finished_at - r.started_at).total_seconds()) }}{% else %}—{% endif %}</td>
+      </tr>
+      {% if r.log %}<tr><td colspan="5"><div class="log-box">{{ r.log }}</div></td></tr>{% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty"><h3>No activity yet</h3><p>Generate a report or import data to see job runs here.</p></div>
+{% endif %}
+{% endblock %}

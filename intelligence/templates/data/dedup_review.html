@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Dedup review · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">Data quality</div><h1 class="page-title">Possible duplicates</h1>
+  <p class="page-sub">{{ candidates|length }} candidate pair{{ '' if candidates|length==1 else 's' }} — same company (fuzzy match), within 5 days, amount within 10%.</p>
+</div>
+<a class="btn btn-ghost btn-sm" href="{{ url_for('data.index') }}"><i class="ph ph-arrow-left"></i> Back to data</a>
+</div>
+
+{% if not candidates %}
+<div class="empty"><h3>No likely duplicates found</h3><p>Everything that survived exact dedup looks distinct.</p></div>
+{% else %}
+{% for c in candidates %}
+<div class="card" style="margin-bottom:var(--sp-4)">
+  <div class="grid grid-2" style="gap:var(--sp-4)">
+    {% for d in [c.a, c.b] %}
+    <div style="padding:var(--sp-3);background:var(--sand);border-radius:var(--radius-sm)">
+      <div style="font-weight:700">{{ d.company_name }}</div>
+      <div class="muted" style="font-size:var(--text-sm);margin-top:4px">
+        {{ d.deal_date.strftime('%d %b %Y') }} · {{ d.funding_round_size or '$%sM'|format(d.amount_usd_mn) }} · {{ d.sector_canonical }}
+      </div>
+      <div class="muted" style="font-size:var(--text-xs);margin-top:4px">{{ d.investors_raw or 'No investors listed' }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  <div style="display:flex;gap:10px;margin-top:var(--sp-4);flex-wrap:wrap">
+    <form method="post" action="{{ url_for('data.dedup_merge') }}" onsubmit="return confirm('Delete the second row as a duplicate of the first?')">
+      <input type="hidden" name="keep_id" value="{{ c.a.id }}">
+      <input type="hidden" name="drop_id" value="{{ c.b.id }}">
+      <button class="btn btn-sm" type="submit"><i class="ph ph-trash"></i> Keep #1, delete #2</button>
+    </form>
+    <form method="post" action="{{ url_for('data.dedup_merge') }}" onsubmit="return confirm('Delete the first row as a duplicate of the second?')">
+      <input type="hidden" name="keep_id" value="{{ c.b.id }}">
+      <input type="hidden" name="drop_id" value="{{ c.a.id }}">
+      <button class="btn btn-sm" type="submit"><i class="ph ph-trash"></i> Keep #2, delete #1</button>
+    </form>
+    <form method="post" action="{{ url_for('data.dedup_dismiss') }}">
+      <input type="hidden" name="hash_a" value="{{ c.a.dedup_hash }}">
+      <input type="hidden" name="hash_b" value="{{ c.b.dedup_hash }}">
+      <button class="btn btn-ghost btn-sm" type="submit"><i class="ph ph-x"></i> Not a duplicate</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

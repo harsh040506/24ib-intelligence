@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Not found · {{ brand }}{% endblock %}
+{% block content %}
+<div class="empty">
+  <h3>404 — Not found</h3>
+  <p>
+    That page doesn't exist. If you followed a link to a company, sector or
+    investor, it may have had its last deal deleted or renamed.
+  </p>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:20px">
+    <a class="btn btn-primary" href="{{ url_for('dashboard.home') }}">Go to dashboard</a>
+    <a class="btn btn-ghost" href="{{ url_for('data.index') }}">Browse the data</a>
+    <a class="btn btn-ghost" href="{{ url_for('reports.index') }}">All reports</a>
+  </div>
+</div>
+{% endblock %}

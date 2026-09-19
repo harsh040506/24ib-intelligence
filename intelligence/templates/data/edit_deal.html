@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ deal.company_name }} · {{ brand }}{% endblock %}
+
+{% macro field(name, label, hint='', type='text', required=False) %}
+<div class="field">
+  <label for="f-{{ name }}">{{ label }}{% if required %} <span class="req" aria-hidden="true">*</span>{% endif %}</label>
+  <input class="input {{ 'has-error' if errors.get(name) }}" id="f-{{ name }}" type="{{ type }}"
+         name="{{ name }}" value="{{ values.get(name, '') }}"
+         {% if required %}required{% endif %}
+         {% if errors.get(name) %}aria-invalid="true" aria-describedby="e-{{ name }}"{% elif hint %}aria-describedby="h-{{ name }}"{% endif %}>
+  {% if errors.get(name) %}
+    <p class="field-error" id="e-{{ name }}" role="alert">{{ errors[name] }}</p>
+  {% elif hint %}
+    <p class="field-hint" id="h-{{ name }}">{{ hint }}</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">Edit deal</div>
+  <h1 class="page-title">{{ deal.company_name }}</h1>
+  <p class="page-sub">Recorded {{ deal.created_at.strftime('%d %b %Y') }} · changes are mirrored into the Excel master.</p>
+</div>
+<a class="btn btn-ghost btn-sm" href="{{ next_url }}"><i class="ph ph-arrow-left" aria-hidden="true"></i> Back</a>
+</div>
+
+{% if errors %}
+<div class="flash flash-error" role="alert" style="margin-bottom:var(--sp-4)">
+  Please fix the {{ errors|length }} highlighted field{{ '' if errors|length == 1 else 's' }} below.
+</div>
+{% endif %}
+
+<form method="post" class="card" style="max-width:720px" data-busy="Saving…" data-dirty-guard>
+  <input type="hidden" name="next" value="{{ next_url }}">
+
+  {{ field('company_name', 'Company', required=True) }}
+  <div class="grid grid-2" style="gap:var(--sp-4)">
+    {{ field('deal_date', 'Date', hint='e.g. 2026-04-15 or 15-Apr-26', required=True) }}
+    {{ field('amount', 'Amount (USD Mn)', hint='Numbers only — 5 means $5M. Leave 0 if undisclosed.') }}
+  </div>
+  <div class="grid grid-2" style="gap:var(--sp-4)">
+    {{ field('sector', 'Sector', hint='Normalised to the canonical taxonomy on save.') }}
+    {{ field('subsector', 'Subsector') }}
+  </div>
+  <div class="grid grid-2" style="gap:var(--sp-4)">
+    {{ field('business_model', 'Business model', hint='B2B, B2C, …') }}
+    {{ field('round_type', 'Round') }}
+  </div>
+  <div class="grid grid-2" style="gap:var(--sp-4)">
+    {{ field('funding_round_size', 'Round size (as reported)', hint='Free text, e.g. $15 Mn') }}
+    {{ field('lead_investor', 'Lead investor') }}
+  </div>
+
+  <div class="field">
+    <label for="f-investors_raw">Investors</label>
+    <textarea class="input {{ 'has-error' if errors.get('investors_raw') }}" id="f-investors_raw"
+              name="investors_raw" rows="2"
+              {% if errors.get('investors_raw') %}aria-invalid="true" aria-describedby="e-investors_raw"{% else %}aria-describedby="h-investors_raw"{% endif %}
+              style="resize:vertical">{{ values.get('investors_raw', '') }}</textarea>
+    {% if errors.get('investors_raw') %}
+      <p class="field-error" id="e-investors_raw" role="alert">{{ errors['investors_raw'] }}</p>
+    {% else %}
+      <p class="field-hint" id="h-investors_raw">Comma-separated — each name becomes its own investor page.</p>
+    {% endif %}
+  </div>
+
+  {{ field('source_url', 'Source URL', hint='http(s) link to the article this came from.', type='url') }}
+
+  <div style="display:flex;gap:10px;margin-top:var(--sp-4);flex-wrap:wrap">
+    <button class="btn btn-primary" type="submit"><i class="ph ph-check" aria-hidden="true"></i> Save changes</button>
+    <a class="btn btn-ghost" href="{{ next_url }}">Cancel</a>
+  </div>
+</form>
+
+<div class="card" style="max-width:720px;margin-top:var(--sp-5)">
+  <div class="eyebrow" style="margin-bottom:10px">Danger zone</div>
+  <p class="muted" style="font-size:var(--text-sm);margin-bottom:var(--sp-3)">
+    Deleting removes this deal from the database and the Excel master. Reports
+    already generated keep their stored numbers until regenerated.
+  </p>
+  <form method="post" action="{{ url_for('data.delete_deal', deal_id=deal.id) }}"
+        data-confirm="Delete {{ deal.company_name }} permanently? This cannot be undone."
+        data-busy="Deleting…">
+    <input type="hidden" name="next" value="{{ url_for('data.index') }}">
+    <button class="btn btn-ghost btn-sm btn-danger" type="submit">
+      <i class="ph ph-trash" aria-hidden="true"></i> Delete this deal
+    </button>
+  </form>
+</div>
+{% endblock %}

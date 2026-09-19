@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ brand }}{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <nav class="nav">
+    <a href="{{ url_for('dashboard.home') }}" class="nav-brand">
+      <span class="nav-mark" aria-hidden="true">24IB</span>
+      <span>Intelligence</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false"
+            onclick="document.querySelector('.nav').classList.toggle('is-open');
+                     this.setAttribute('aria-expanded', document.querySelector('.nav').classList.contains('is-open'));">
+      <i class="ph ph-list" aria-hidden="true"></i>
+    </button>
+    <div class="nav-links">
+      <a class="nav-link {{ 'active' if active=='dashboard' }}" href="{{ url_for('dashboard.home') }}"><i class="ph ph-squares-four" aria-hidden="true"></i>Dashboard</a>
+      <a class="nav-link {{ 'active' if active=='reports' }}" href="{{ url_for('reports.index') }}"><i class="ph ph-newspaper" aria-hidden="true"></i>Reports</a>
+      <a class="nav-link {{ 'active' if active=='data' }}" href="{{ url_for('data.index') }}"><i class="ph ph-database" aria-hidden="true"></i>Data</a>
+      <a class="nav-link {{ 'active' if active=='runs' }}" href="{{ url_for('dashboard.runs') }}"><i class="ph ph-pulse" aria-hidden="true"></i>Activity</a>
+    </div>
+    <div class="nav-right">
+      <form action="{{ url_for('explore.search') }}" method="get" role="search" class="nav-search">
+        <label class="sr-only" for="global-search">Search companies, sectors and investors</label>
+        <input class="input" id="global-search" type="search" name="q"
+               placeholder="Search…  /" title="Press / to focus">
+      </form>
+      <span class="nav-org">{{ current_org.name if current_org }}</span>
+    </div>
+  </nav>
+
+  {% block body %}
+  <main class="container" id="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flashes" role="status" aria-live="polite">
+        {% for cat, msg in messages %}
+          <div class="flash flash-{{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  {% endblock %}
+
+  <script>
+    // ── "/" focuses global search (unless already typing somewhere) ──
+    document.addEventListener('keydown', function (e) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !e.metaKey && !e.ctrlKey) {
+        const box = document.getElementById('global-search');
+        if (box) { e.preventDefault(); box.focus(); box.select(); }
+      }
+    });
+
+    // ── Confirm + busy state on submit ──────────────────────────────
+    // Long operations here really are long (an Inc42 scrape takes ~a minute),
+    // so every submit gets an unambiguous "working" state: the button is
+    // disabled to prevent a double-POST and relabelled with what's happening.
+    document.addEventListener('submit', function (e) {
+      const form = e.target;
+      const btn = (e.submitter && e.submitter.tagName === 'BUTTON') ? e.submitter : null;
+      const confirmMsg = (btn && btn.dataset.confirm) || form.dataset.confirm;
+      if (confirmMsg && !window.confirm(confirmMsg)) { e.preventDefault(); return; }
+
+      form.dataset.submitting = '1';  // release the unsaved-changes guard
+      const busyLabel = (btn && btn.dataset.busy) || form.dataset.busy;
+      const target = btn || form.querySelector('button[type=submit]');
+      if (busyLabel && target) {
+        target.classList.add('is-busy');
+        target.innerHTML = '<span class="spinner" aria-hidden="true"></span> ' + busyLabel;
+        // Disabling immediately would drop the button's own name/value from the
+        // POST, so defer past the browser's form serialisation.
+        setTimeout(function () {
+          form.querySelectorAll('button[type=submit]').forEach(b => { b.disabled = true; });
+        }, 0);
+      }
+    });
+
+    // ── Unsaved-changes guard for long forms ────────────────────────
+    document.querySelectorAll('form[data-dirty-guard]').forEach(function (form) {
+      let dirty = false;
+      form.addEventListener('input', function () { dirty = true; });
+      window.addEventListener('beforeunload', function (e) {
+        if (dirty && form.dataset.submitting !== '1') { e.preventDefault(); e.returnValue = ''; }
+      });
+    });
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,33 @@
+# ─────────────────────────────────────────────────────────────────────────
+# NOTE: instance/intelligence.db and instance/Inc42_Funding_Master_Data.xlsx
+# are deliberately NOT ignored. GitHub Actions runners are wiped after every
+# run, so the repository itself has to carry the deal history between weekly
+# updates. If you ignore those two files the automation will start from an
+# empty database and republish the whole site from scratch every week.
+# ─────────────────────────────────────────────────────────────────────────
+
+# Local secrets — never commit these.
+.env
+
+# Generated PDF/CSV exports. Recreated on demand, no need to version them.
+instance/exports/
+
+# Python build artefacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Half-written files from an interrupted atomic write
+*.tmp
+
+# Editor / OS noise
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

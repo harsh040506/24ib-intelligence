@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}API Docs · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">Developers</div><h1 class="page-title">{{ spec.info.title }}</h1>
+  <p class="page-sub">{{ spec.info.description }} · v{{ spec.info.version }}</p>
+</div>
+<a class="btn btn-ghost" href="{{ url_for('api.openapi') }}">openapi.json</a>
+</div>
+
+<div class="card" style="margin-bottom:var(--sp-5)">
+  <div class="eyebrow" style="margin-bottom:10px">Authentication</div>
+  <p class="muted" style="font-size:var(--text-sm)">Send your org API key as a bearer token. Create a key on the <a href="{{ url_for('data.index') }}">Data</a> page.</p>
+  <div class="log-box" style="margin-top:10px">curl -H "Authorization: Bearer ib_xxx" {{ request.host_url }}api/v1/deals?limit=50</div>
+</div>
+
+{% for path, methods in spec.paths.items() %}
+  {% for method, op in methods.items() %}
+  <div class="card" style="margin-bottom:var(--sp-3)">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="badge badge-green">{{ method|upper }}</span>
+      <span class="mono" style="font-weight:600">/api/v1{{ path }}</span>
+    </div>
+    <p style="margin-top:8px">{{ op.summary }}</p>
+    {% if op.parameters %}
+    <table class="table" style="margin-top:10px">
+      <thead><tr><th>Param</th><th>In</th><th>Type</th></tr></thead>
+      <tbody>{% for pa in op.parameters %}<tr><td class="mono">{{ pa.name }}</td><td class="muted">{{ pa.in }}</td><td class="muted">{{ pa.schema.type }}{% if pa.schema.example %} (e.g. {{ pa.schema.example }}){% endif %}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% endfor %}
+{% endblock %}

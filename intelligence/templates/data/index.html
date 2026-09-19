@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Data · {{ brand }}{% endblock %}
+
+{% macro sort_link(key, label) %}
+  {% set is_active = state.sort == key %}
+  {% set next_dir = 'asc' if (is_active and state.dir == 'desc') else ('desc' if is_active else 'desc') %}
+  <a class="th-sort {{ 'is-sorted' if is_active }}"
+     href="{{ url_for('data.index', q=state.q, sector=state.sector, per=per, sort=key, dir=next_dir) }}"
+     {% if is_active %}aria-sort="{{ 'ascending' if state.dir == 'asc' else 'descending' }}"{% endif %}>
+    {{ label }}<span class="th-arrow" aria-hidden="true">{{ '↑' if (is_active and state.dir == 'asc') else ('↓' if is_active else '') }}</span>
+  </a>
+{% endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="eyebrow">Workspace data</div><h1 class="page-title">Deal Data</h1>
+    <p class="page-sub">{{ grand_total }} deals · {{ sector_count }} canonical sectors</p>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('data.dedup_review') }}"><i class="ph ph-copy" aria-hidden="true"></i> Review duplicates</a>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('data.export_csv', **state) }}"><i class="ph ph-download-simple" aria-hidden="true"></i> Export CSV</a>
+  </div>
+</div>
+
+<details class="card tools-card" style="margin-bottom:var(--sp-5)" {{ 'open' if grand_total == 0 }}>
+  <summary class="tools-summary">
+    <span class="eyebrow">Import &amp; sources</span>
+    <span class="muted" style="font-size:var(--text-xs)">
+      {% if last_import %}Last import {{ last_import.started_at.strftime('%d %b, %H:%M') }}{% else %}No imports yet{% endif %}
+    </span>
+  </summary>
+
+  <div class="grid grid-2" style="gap:var(--sp-4);margin-top:var(--sp-4)">
+    <div>
+      <div style="font-weight:700;margin-bottom:4px">Import full history</div>
+      <p class="muted" style="font-size:var(--text-sm);margin-bottom:var(--sp-3)">
+        Loads the complete ~3-year Inc42 Funding Galore history from the master
+        workbook. Sectors are normalised and duplicates skipped.
+        {% if not history_available %}<br><span class="val-neg">Master workbook not found — place Inc42_Funding_Master_Data.xlsx beside the app.</span>{% endif %}
+      </p>
+      <form method="post" action="{{ url_for('data.inc42_backfill') }}" data-busy="Importing history…">
+        <button class="btn btn-primary" type="submit" {{ 'disabled' if not history_available }}><i class="ph ph-download-simple" aria-hidden="true"></i> Import 3-year history</button>
+      </form>
+    </div>
+    <div>
+      <div style="font-weight:700;margin-bottom:4px">Refresh from Inc42</div>
+      <p class="muted" style="font-size:var(--text-sm);margin-bottom:var(--sp-3)">
+        Fetches the latest weekly reports live from Inc42 and adds only new
+        records. Takes up to a minute — leave this tab open.
+      </p>
+      <form method="post" action="{{ url_for('data.inc42_refresh') }}" data-busy="Scraping Inc42…" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label class="muted" style="font-size:var(--text-xs);text-transform:none;letter-spacing:0">Last
+          <input class="input" type="number" name="weeks" value="10" min="1" max="26" aria-label="Number of weeks to refresh" style="width:64px;display:inline-block;padding:6px 8px"> weeks</label>
+        <button class="btn" type="submit"><i class="ph ph-arrows-clockwise" aria-hidden="true"></i> Refresh</button>
+      </form>
+    </div>
+
+    <div>
+      <div style="font-weight:700;margin-bottom:4px">Import deals (CSV)</div>
+      <p class="muted" style="font-size:var(--text-sm);margin-bottom:var(--sp-3)">
+        Columns (any order): company, sector, subsector, business model, funding round size, amount, date, round, investors, lead, url.
+        Amounts accept <span class="mono">$15 Mn</span>, <span class="mono">1.5 Bn</span>, <span class="mono">150K</span>.
+      </p>
+      <form method="post" action="{{ url_for('data.import_csv') }}" enctype="multipart/form-data" data-busy="Importing…" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input class="file-input" type="file" name="file" accept=".csv,.tsv,.txt" aria-label="CSV file to import" required>
+        <button class="btn btn-primary" type="submit"><i class="ph ph-upload-simple" aria-hidden="true"></i> Import</button>
+      </form>
+    </div>
+
+    <div>
+      <div style="font-weight:700;margin-bottom:4px">API keys</div>
+      {% if keys %}
+        {% for k in keys %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--sand)">
+          <span class="mono" style="font-size:var(--text-sm)">{{ k.prefix }}… · {{ k.name }}</span>
+          <form method="post" action="{{ url_for('data.revoke_api_key', key_id=k.id) }}"
+                onsubmit="return confirm('Revoke this API key? Any script using it will stop working.')">
+            <button class="btn btn-ghost btn-sm" type="submit">Revoke</button>
+          </form>
+        </div>
+        {% endfor %}
+      {% else %}<p class="muted" style="font-size:var(--text-sm)">No active keys.</p>{% endif %}
+      <form method="post" action="{{ url_for('data.create_api_key') }}" style="margin-top:12px;display:flex;gap:8px">
+        <input class="input" name="name" placeholder="key name" aria-label="New API key name" style="flex:1">
+        <button class="btn btn-sm" type="submit"><i class="ph ph-plus" aria-hidden="true"></i> New key</button>
+      </form>
+      <p class="muted" style="font-size:var(--text-xs);margin-top:8px">API docs: <a href="{{ url_for('api.docs') }}">/api/v1/docs</a></p>
+    </div>
+  </div>
+
+  {% if last_import %}
+  <div class="muted" style="font-size:var(--text-xs);margin-top:var(--sp-4);padding-top:var(--sp-3);border-top:1px solid var(--sand)">
+    Last import ({{ last_import.started_at.strftime('%d %b %Y, %H:%M') }}): {{ last_import.detail }}
+    <a href="{{ url_for('dashboard.runs') }}">View full log →</a>
+  </div>
+  {% endif %}
+</details>
+
+<form method="get" action="{{ url_for('data.index') }}" class="filter-bar" role="search">
+  <label class="sr-only" for="deal-q">Search deals</label>
+  <input class="input" id="deal-q" type="search" name="q" value="{{ state.q }}"
+         placeholder="Search company, investor, subsector…" style="max-width:280px">
+  <label class="sr-only" for="deal-sector">Filter by sector</label>
+  <select class="input" id="deal-sector" name="sector" style="width:auto">
+    <option value="">All sectors</option>
+    {% for s in used_sectors %}<option value="{{ s }}" {{ 'selected' if state.sector == s }}>{{ s }}</option>{% endfor %}
+  </select>
+  <input type="hidden" name="sort" value="{{ state.sort }}">
+  <input type="hidden" name="dir" value="{{ state.dir }}">
+  <label class="sr-only" for="deal-per">Rows per page</label>
+  <select class="input" id="deal-per" name="per" style="width:auto" onchange="this.form.submit()">
+    {% for size in page_sizes %}<option value="{{ size }}" {{ 'selected' if per == size }}>{{ size }} / page</option>{% endfor %}
+  </select>
+  <button class="btn btn-sm" type="submit"><i class="ph ph-magnifying-glass" aria-hidden="true"></i> Search</button>
+  {% if state.q or state.sector %}
+  <a class="btn btn-ghost btn-sm" href="{{ url_for('data.index', per=per) }}">Clear</a>
+  <span class="muted" style="font-size:var(--text-sm)">{{ total }} match{{ '' if total == 1 else 'es' }}</span>
+  {% endif %}
+</form>
+
+{% if deals %}
+<form id="dealsForm" method="post" action="{{ url_for('data.bulk_delete_deals') }}">
+<input type="hidden" name="next" value="{{ request.full_path }}">
+<div class="bulk-bar" id="bulkBar" hidden>
+  <strong><span id="selCount">0</span> selected</strong>
+  <label class="sr-only" for="bulk-sector">Sector to move the selected deals to</label>
+  <select class="input" id="bulk-sector" name="sector" style="width:auto;padding:6px 10px">
+    {% for s in canonical_sectors %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+  </select>
+  <button class="btn btn-sm" type="submit" formaction="{{ url_for('data.bulk_reassign_sector') }}"
+          data-busy="Moving…">
+    <i class="ph ph-tag" aria-hidden="true"></i> Move to sector
+  </button>
+  <button class="btn btn-ghost btn-sm btn-danger" type="submit" formaction="{{ url_for('data.bulk_delete_deals') }}"
+          data-confirm="Delete the selected deals permanently? This cannot be undone." data-busy="Deleting…">
+    <i class="ph ph-trash" aria-hidden="true"></i> Delete selected
+  </button>
+  <button class="btn btn-ghost btn-sm" type="button" onclick="clearSelection()">Clear</button>
+</div>
+
+<div class="card" style="padding:0">
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr>
+        <th style="width:32px">
+          <input type="checkbox" id="selectAll" onclick="toggleAll(this)" aria-label="Select all deals on this page">
+        </th>
+        <th>{{ sort_link('date', 'Date') }}</th>
+        <th>{{ sort_link('company', 'Company') }}</th>
+        <th>{{ sort_link('sector', 'Sector') }}</th>
+        <th>Subsector</th><th>Model</th>
+        <th class="num">{{ sort_link('amount', 'Amount') }}</th>
+        <th>{{ sort_link('round', 'Round') }}</th>
+        <th>{{ sort_link('lead', 'Lead') }}</th>
+        <th><span class="sr-only">Actions</span></th>
+      </tr></thead>
+      <tbody>
+        {% for d in deals %}
+        <tr>
+          <td><input type="checkbox" name="ids" value="{{ d.id }}" class="row-check" onchange="updateCount()"
+                     aria-label="Select {{ d.company_name }}"></td>
+          <td class="muted nowrap">{{ d.deal_date.strftime('%d-%b-%y') }}</td>
+          <td style="font-weight:600"><a href="{{ url_for('explore.company', name=d.company_name) }}">{{ d.company_name }}</a></td>
+          <td><a class="badge badge-gray" href="{{ url_for('explore.sector', name=d.sector_canonical) }}">{{ d.sector_canonical }}</a></td>
+          <td class="muted">{{ d.subsector or '—' }}</td>
+          <td class="muted">{{ d.business_model or '—' }}</td>
+          <td class="num nowrap">{{ d.funding_round_size or '$%sM'|format(d.amount_usd_mn) }}</td>
+          <td class="muted">{{ d.round_type or '—' }}</td>
+          <td class="muted">{% if d.lead_investor %}<a href="{{ url_for('explore.investor', name=d.lead_investor) }}">{{ d.lead_investor }}</a>{% else %}—{% endif %}</td>
+          <td>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('data.edit_deal', deal_id=d.id, next=request.full_path) }}"
+               title="Edit {{ d.company_name }}" aria-label="Edit {{ d.company_name }}"><i class="ph ph-pencil-simple" aria-hidden="true"></i></a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+</form>
+
+{% if pages > 1 %}
+<nav class="pager" aria-label="Deal pages">
+  {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for('data.index', page=page-1, **dict(state, per=per)) }}" rel="prev">← Prev</a>{% endif %}
+  <span class="btn btn-sm btn-ghost" aria-current="page">Page {{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-sm" href="{{ url_for('data.index', page=page+1, **dict(state, per=per)) }}" rel="next">Next →</a>{% endif %}
+</nav>
+{% endif %}
+
+{% elif state.q or state.sector %}
+<div class="empty">
+  <h3>No deals match those filters</h3>
+  <p>Nothing found for {% if state.q %}“{{ state.q }}”{% endif %}{% if state.q and state.sector %} in {% endif %}{% if state.sector %}{{ state.sector }}{% endif %}.</p>
+  <a class="btn btn-primary" style="margin-top:16px" href="{{ url_for('data.index') }}">Clear filters</a>
+</div>
+{% else %}
+<div class="empty">
+  <h3>No deals yet</h3>
+  <p>Import the Inc42 history above, refresh from Inc42, or upload a CSV to get started.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function updateCount() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    const bar = document.getElementById('bulkBar');
+    document.getElementById('selCount').textContent = n;
+    bar.hidden = n === 0;
+    const boxes = document.querySelectorAll('.row-check');
+    const all = document.getElementById('selectAll');
+    all.checked = n > 0 && n === boxes.length;
+    all.indeterminate = n > 0 && n < boxes.length;
+  }
+  function toggleAll(cb) {
+    document.querySelectorAll('.row-check').forEach(el => { el.checked = cb.checked; });
+    updateCount();
+  }
+  function clearSelection() {
+    document.querySelectorAll('.row-check').forEach(el => { el.checked = false; });
+    document.getElementById('selectAll').checked = false;
+    updateCount();
+  }
+  updateCount();
+</script>
+{% endblock %}

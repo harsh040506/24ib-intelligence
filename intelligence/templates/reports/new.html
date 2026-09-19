@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Generate report · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">New</div><h1 class="page-title">Generate a report</h1>
+  <p class="page-sub">Pick a period. Leave the key blank to use the current period.</p>
+</div></div>
+
+<div class="card" style="max-width:560px">
+  <form method="post" data-busy="Generating…">
+    <div class="field">
+      <label>Period type</label>
+      <select class="input" name="period_type" id="period_type" onchange="syncKey()">
+        {% for pt in PeriodType %}<option value="{{ pt.value }}">{{ pt.value|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Period key <span class="muted" style="text-transform:none;letter-spacing:0">(optional)</span></label>
+      <input class="input" name="period_key" id="period_key" placeholder="e.g. 2026-W14">
+      <p class="muted" style="font-size:var(--text-xs);margin-top:6px">
+        Formats: weekly <span class="mono">2026-W14</span> · monthly <span class="mono">2026-03</span> ·
+        quarterly <span class="mono">2026-Q1</span> · annual <span class="mono">2026</span>
+      </p>
+    </div>
+    <button class="btn btn-primary" type="submit"><i class="ph ph-lightning"></i> Generate</button>
+  </form>
+</div>
+
+<div class="card" style="max-width:560px;margin-top:var(--sp-5);background:var(--sand)">
+  <div class="eyebrow" style="margin-bottom:10px">Suggested current periods</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    {% for k, v in suggestions.items() %}
+      <button class="btn btn-sm" type="button" onclick="pick('{{ k }}','{{ v }}')">{{ k }}: <span class="mono">{{ v }}</span></button>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  const SUGG = {{ suggestions|tojson }};
+  function syncKey() {
+    const pt = document.getElementById('period_type').value;
+    document.getElementById('period_key').placeholder = 'e.g. ' + SUGG[pt];
+  }
+  function pick(pt, key) {
+    document.getElementById('period_type').value = pt;
+    document.getElementById('period_key').value = key;
+  }
+</script>
+{% endblock %}

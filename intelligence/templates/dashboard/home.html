@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ brand }}{% endblock %}
+{% block content %}
+
+<div class="hero">
+  <div class="hero-eyebrow"><i class="ph ph-sparkle" aria-hidden="true"></i> Workspace</div>
+  <div class="hero-title">{{ current_org.name }}</div>
+  <div class="hero-sub">
+    {% if span and span[0] %}
+      Tracking {{ total_deals }} deals · {{ span[0].strftime('%b %Y') }} – {{ span[1].strftime('%b %Y') }}
+    {% else %}
+      No deal data yet — import the Inc42 history to begin
+    {% endif %}
+  </div>
+  <div class="hero-actions">
+    <a class="btn btn-primary" href="{{ url_for('reports.new') }}"><i class="ph ph-plus-circle" aria-hidden="true"></i> Generate report</a>
+    <a class="btn btn-ghost" href="{{ url_for('data.index') }}"><i class="ph ph-database" aria-hidden="true"></i> Manage data</a>
+  </div>
+</div>
+
+{% if total_deals == 0 %}
+{# First-run onboarding: three concrete steps rather than a wall of empty cards. #}
+<div class="card" style="margin-bottom:var(--sp-8)">
+  <div class="section-head"><i class="ph ph-flag-banner" aria-hidden="true"></i> Get started</div>
+  <ol style="margin:0;padding-left:1.2em;line-height:2">
+    <li><strong>Load the data.</strong> <a href="{{ url_for('data.index') }}">Import the 3-year Inc42 history</a> from the master workbook, or upload your own CSV.</li>
+    <li><strong>Generate an edition.</strong> <a href="{{ url_for('reports.new') }}">Build a weekly or monthly report</a> — the engine handles the aggregation.</li>
+    <li><strong>Publish it.</strong> Weekly and monthly editions publish to the public site automatically; unpublish any you want held back.</li>
+  </ol>
+</div>
+{% else %}
+
+{% if pinned %}
+<div class="card" style="margin-bottom:var(--sp-6)">
+  <div class="section-head"><i class="ph ph-star-fill" aria-hidden="true"></i> Pinned</div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px">
+    {% for p in pinned %}
+    <span class="pin-chip">
+      <a href="{{ url_for(p.endpoint, **p.kwargs) }}"><i class="ph ph-{{ p.icon }}" aria-hidden="true"></i> {{ p.label }}</a>
+      <form method="post" action="{{ url_for('explore.toggle_favorite') }}" style="display:inline">
+        <input type="hidden" name="kind" value="{{ p.kind }}">
+        <input type="hidden" name="ref" value="{{ p.ref }}">
+        <input type="hidden" name="label" value="{{ p.label }}">
+        <input type="hidden" name="next" value="{{ url_for('dashboard.home') }}">
+        <button type="submit" class="pin-remove" aria-label="Unpin {{ p.label }}" title="Unpin">×</button>
+      </form>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<div class="grid grid-4" style="margin-bottom:var(--sp-8)">
+  <div class="card"><div class="kpi"><div class="kpi-icon"><i class="ph ph-handshake" aria-hidden="true"></i></div><div class="stat"><span class="stat-label">Total Deals</span><span class="stat-value">{{ total_deals }}</span></div></div></div>
+  <div class="card"><div class="kpi"><div class="kpi-icon blue"><i class="ph ph-currency-circle-dollar" aria-hidden="true"></i></div><div class="stat"><span class="stat-label">Capital Tracked</span><span class="stat-value">${{ (total_capital/1000)|round(2) }}B</span></div></div></div>
+  <div class="card"><div class="kpi"><div class="kpi-icon amber"><i class="ph ph-squares-four" aria-hidden="true"></i></div><div class="stat"><span class="stat-label">Sectors</span><span class="stat-value">{{ sector_total }}</span></div></div></div>
+  <div class="card"><div class="kpi"><div class="kpi-icon sand"><i class="ph ph-newspaper" aria-hidden="true"></i></div><div class="stat"><span class="stat-label">Reports</span><span class="stat-value">{{ report_count }}</span></div></div></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <div class="section-head"><i class="ph ph-chart-bar-horizontal" aria-hidden="true"></i> Top sectors (all-time)</div>
+    {% if sectors %}
+    <div class="hbars" style="gap:12px">
+      {% for s in sectors %}
+      <div style="display:grid;grid-template-columns:140px 1fr 96px;align-items:center;gap:12px">
+        <div style="font-size:var(--text-sm);font-weight:600;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ s.name }}">
+          <a href="{{ url_for('explore.sector', name=s.name) }}">{{ s.name }}</a>
+        </div>
+        <div class="hbar-track"><div class="hbar-fill" style="width:{{ s.pct }}%"></div></div>
+        <div class="hbar-val">${{ s.amt }}M<span class="muted" style="font-weight:600"> · {{ s.deals }}</span></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="muted">Import deals to see sector flows.</p>{% endif %}
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:var(--sp-5)">
+      <div class="section-head"><i class="ph ph-clock-counter-clockwise" aria-hidden="true"></i> Recent reports</div>
+      {% if recent_reports %}
+        {% for r in recent_reports %}
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--sand)">
+          <a href="{{ url_for('reports.view', report_id=r.id) }}" style="font-weight:600">
+            <i class="ph ph-file-text" style="color:var(--g700);margin-right:6px" aria-hidden="true"></i>{{ r.title }}
+          </a>
+          <span class="badge badge-{{ 'green' if r.status.value=='ready' else 'amber' }}">{{ r.status.value }}</span>
+        </div>
+        {% endfor %}
+        <a class="btn btn-ghost btn-sm" style="margin-top:var(--sp-3)" href="{{ url_for('reports.index') }}">All reports →</a>
+      {% else %}
+        <p class="muted">No reports yet. <a href="{{ url_for('reports.new') }}">Generate one →</a></p>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <div class="section-head"><i class="ph ph-shield-check" aria-hidden="true"></i> Data quality</div>
+      {% if flags %}
+        {% for f in flags %}
+        <div class="quality-flag">
+          <div>
+            <div style="font-weight:600">{{ f.text }}</div>
+            <div class="muted" style="font-size:var(--text-xs)">{{ f.hint }}</div>
+          </div>
+          <a class="btn btn-ghost btn-sm" href="{{ f.url }}">{{ f.cta }}</a>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted"><i class="ph ph-check-circle" style="color:var(--g600)" aria-hidden="true"></i> No data-quality flags. Everything looks clean.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

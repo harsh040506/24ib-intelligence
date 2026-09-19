@@ -1,0 +1,10 @@
+# Dependencies for the unattended GitHub Actions run.
+#
+# Everything the app needs locally…
+-r requirements.txt
+
+# …plus Playwright, which is optional for local use but mandatory here: the
+# Inc42 tag page builds its article list with JavaScript ("Load More"), so
+# discovering the weekly editions needs a real browser. The workflow installs
+# the Chromium binary separately with `playwright install --with-deps chromium`.
+playwright>=1.49,<2.0

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Search{% if q %} · {{ q }}{% endif %} · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head"><div>
+  <div class="eyebrow">Search</div><h1 class="page-title">{{ q or 'Search the workspace' }}</h1>
+  <p class="page-sub">Across companies, sectors, and investors — full history.</p>
+</div></div>
+
+{% if not q or q|length < 2 %}
+<div class="empty"><h3>Type at least 2 characters</h3><p>Use the search box in the top nav.</p></div>
+{% elif not (results.companies or results.sectors or results.investors) %}
+<div class="empty"><h3>No matches for “{{ q }}”</h3><p>Try a different spelling or a shorter term.</p></div>
+{% else %}
+<div class="grid grid-3">
+  {% if results.companies %}
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:var(--sp-3)"><i class="ph ph-buildings"></i> Companies</div>
+    {% for c in results.companies %}<div style="padding:6px 0"><a href="{{ url_for('explore.company', name=c) }}">{{ c }}</a></div>{% endfor %}
+  </div>
+  {% endif %}
+  {% if results.sectors %}
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:var(--sp-3)"><i class="ph ph-squares-four"></i> Sectors</div>
+    {% for s in results.sectors %}<div style="padding:6px 0"><a href="{{ url_for('explore.sector', name=s) }}">{{ s }}</a></div>{% endfor %}
+  </div>
+  {% endif %}
+  {% if results.investors %}
+  <div class="card">
+    <div class="eyebrow" style="margin-bottom:var(--sp-3)"><i class="ph ph-handshake"></i> Investors</div>
+    {% for i in results.investors %}<div style="padding:6px 0"><a href="{{ url_for('explore.investor', name=i) }}">{{ i }}</a></div>{% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% if results.deals %}
+<div class="card" style="padding:0;margin-top:var(--sp-6)">
+  <div class="eyebrow" style="margin:var(--sp-5) var(--sp-5) var(--sp-3)">Matching deals</div>
+  <table class="table">
+    <thead><tr><th>Date</th><th>Company</th><th>Sector</th><th class="num">Amount</th></tr></thead>
+    <tbody>
+      {% for d in results.deals %}
+      <tr>
+        <td class="muted">{{ d.deal_date.strftime('%d-%b-%y') }}</td>
+        <td style="font-weight:600"><a href="{{ url_for('explore.company', name=d.company_name) }}">{{ d.company_name }}</a></td>
+        <td><span class="badge badge-gray">{{ d.sector_canonical }}</span></td>
+        <td class="num">{{ d.funding_round_size or '$%sM'|format(d.amount_usd_mn) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

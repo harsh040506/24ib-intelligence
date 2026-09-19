@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Reports · {{ brand }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><div class="eyebrow">Library</div><h1 class="page-title">Reports</h1>
+  <p class="page-sub">{{ all_total }} report{{ '' if all_total==1 else 's' }} across all periods.</p></div>
+  <a class="btn btn-primary" href="{{ url_for('reports.new') }}"><i class="ph ph-plus-circle"></i> Generate report</a>
+</div>
+
+{% if all_total == 0 %}
+<div class="empty">
+  <h3>No reports yet</h3>
+  <p>Generate your first weekly, monthly, quarterly or annual intelligence report.</p>
+  <a class="btn btn-primary" style="margin-top:16px" href="{{ url_for('reports.new') }}">Generate a report</a>
+</div>
+{% else %}
+
+<form method="get" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:var(--sp-5)">
+  <input class="input" type="search" name="q" value="{{ q }}" placeholder="Search title or period…" style="max-width:280px">
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <a class="btn btn-sm {{ 'btn-primary' if not type_filter }}" href="{{ url_for('reports.index', q=q) }}">All</a>
+    {% for pt in PeriodType %}
+    <a class="btn btn-sm {{ 'btn-primary' if type_filter==pt.value }}" href="{{ url_for('reports.index', q=q, type=pt.value) }}">{{ pt.value|capitalize }}</a>
+    {% endfor %}
+  </div>
+  {% if q or type_filter %}<a class="btn btn-ghost btn-sm" href="{{ url_for('reports.index') }}">Clear</a>{% endif %}
+</form>
+
+{% if reports %}
+<div class="grid grid-3">
+  {% for r in reports %}
+  <a class="card card-hover" href="{{ url_for('reports.view', report_id=r.id) }}">
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+      <span class="badge badge-green">{{ r.period_key }}</span>
+      <div style="display:flex;gap:6px">
+        {% if r.period_type.value in ('weekly','monthly') %}
+        <span class="badge badge-{{ 'green' if r.is_published else 'gray' }}">{{ 'published' if r.is_published else 'draft' }}</span>
+        {% endif %}
+        <span class="badge badge-{{ 'green' if r.status.value=='ready' else 'amber' }}">{{ r.status.value }}</span>
+      </div>
+    </div>
+    <div class="muted" style="font-size:var(--text-xs);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">{{ r.period_type.value }}</div>
+    <div style="font-family:var(--font-serif);font-size:var(--text-md);line-height:1.25">{{ r.title }}</div>
+    <div class="muted" style="font-size:var(--text-xs);margin-top:8px">
+      {% if r.generated_at %}Generated {{ r.generated_at.strftime('%d %b %Y') }}{% else %}Not generated{% endif %}
+      {% if r.payload.stats %} · {{ r.payload.stats.total_deals }} deals · {{ r.payload.stats.total_capital_label }}{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% if pages > 1 %}
+<div style="display:flex;gap:8px;justify-content:center;margin-top:var(--sp-6)">
+  {% if page > 1 %}<a class="btn btn-sm" href="{{ url_for('reports.index', q=q, type=type_filter, page=page-1) }}">← Prev</a>{% endif %}
+  <span class="btn btn-sm btn-ghost">Page {{ page }} / {{ pages }}</span>
+  {% if page < pages %}<a class="btn btn-sm" href="{{ url_for('reports.index', q=q, type=type_filter, page=page+1) }}">Next →</a>{% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty">
+  <h3>No reports match</h3>
+  <p>Try a different search or clear the filter.</p>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

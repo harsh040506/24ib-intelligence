@@ -1,0 +1,21 @@
+# 24IB Intelligence Platform — Python dependencies
+Flask==3.1.0
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.48
+Werkzeug==3.1.3
+APScheduler==3.11.0
+croniter==3.0.4
+python-dotenv==1.0.1
+
+# Inc42 ingestion: Excel history import + live refresh
+openpyxl==3.1.5
+requests==2.32.3
+beautifulsoup4==4.12.3
+# Live Inc42 article-URL discovery (JS "Load More") uses Playwright/Chromium,
+# which is also used for PDF export:
+#   pip install playwright && playwright install chromium
+
+# Optional: server-side PDF rendering (the app degrades gracefully if absent).
+# Playwright is the most reliable HTML->PDF path on Windows for rich CSS.
+#   pip install playwright && playwright install chromium
+# playwright==1.49.0

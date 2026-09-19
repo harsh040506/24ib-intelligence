@@ -1,0 +1,121 @@
+<style>
+/* ===== 24IB site chrome (injected) ===== */
+.site-nav{position:static;z-index:100;background:#fdfbf7;border-bottom:1px solid #e8e4db;font-family:'Manrope',system-ui,sans-serif}
+.site-nav-inner{max-width:1400px;margin:0 auto;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.site-nav .nav-brand{display:inline-flex;align-items:baseline;gap:.5rem;text-decoration:none;font-family:'Newsreader',serif;line-height:1;flex-shrink:0}
+.site-nav .nav-mark{font-family:'Newsreader',serif;font-size:1.5rem;font-weight:600;letter-spacing:.01em;color:#0a2418}
+.site-nav .nav-mark span{color:#1b4a36}
+.site-nav .nav-desc{font-family:'Newsreader',serif;font-size:1.18rem;font-weight:400;letter-spacing:.02em;color:#8a8a84;white-space:nowrap}
+.site-nav .nav-links{display:flex;gap:.25rem}
+.site-nav .nav-links a{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6a6a64;text-decoration:none;padding:.5rem .85rem;border-radius:6px;transition:background .2s,color .2s}
+.site-nav .nav-links a:hover{background:#f0ece3;color:#1b4a36}
+.site-nav .nav-links a.active{color:#1b4a36;background:#eef1ea}
+.rep-pager{max-width:1400px;margin:2rem auto 4rem;padding:0 2rem;display:grid;grid-template-columns:1fr auto 1fr;gap:1rem;align-items:stretch;font-family:'Manrope',sans-serif}
+.rep-pager .pg{display:flex;flex-direction:column;justify-content:center;gap:.25rem;text-decoration:none;border:1px solid #e8e4db;padding:1rem 1.25rem;border-radius:8px;transition:transform .2s cubic-bezier(0.16,1,0.3,1),border-color .2s,box-shadow .2s;background:#fdfbf7}
+.rep-pager .pg:hover{transform:translateY(-3px);border-color:#1b4a36;box-shadow:0 12px 24px -14px rgba(10,36,24,.3)}
+.rep-pager .pg span{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#8a8a84}
+.rep-pager .pg b{font-family:'Newsreader',serif;font-size:1.1rem;font-weight:500;color:#1a1a18}
+.rep-pager .pg.next{text-align:right}
+.rep-pager .pg.index{justify-content:center;align-items:center;border:none;background:transparent}
+.rep-pager .pg.index:hover{transform:none;box-shadow:none}
+.rep-pager .pg.index b{font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#1b4a36;font-family:'Manrope',sans-serif}
+.rep-pager .pg.disabled{opacity:.4;pointer-events:none}
+.site-foot{border-top:1px solid #e8e4db;background:#0a2418;color:#fdfbf7;font-family:'Manrope',sans-serif}
+.site-foot .foot-inner{max-width:1400px;margin:0 auto;padding:3rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem}
+.site-foot .foot-brand{font-family:'Newsreader',serif;font-size:1.5rem;font-weight:600;letter-spacing:.04em;color:#fdfbf7}
+.site-foot .foot-brand span{color:#7a9f5a}
+.site-foot .foot-links{display:flex;gap:1.25rem;margin-top:1rem}
+.site-foot .foot-links a{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#cdd8d2;text-decoration:none}
+.site-foot .foot-links a:hover{color:#fff}
+.site-foot .foot-meta{font-size:10px;color:#8a9a92;letter-spacing:.06em;line-height:1.7;text-align:right}
+@media(max-width:640px){
+  .site-nav-inner{padding:0 1.1rem}
+  .site-nav .nav-desc{display:none}
+  .rep-pager{padding:0 1.1rem;grid-template-columns:1fr 1fr;margin-bottom:2.5rem}
+  .rep-pager .pg.index{grid-column:1/-1;order:3}
+  .site-foot .foot-inner{flex-direction:column;align-items:flex-start;text-align:left;padding:2.2rem 1.1rem}
+  .site-foot .foot-meta{text-align:left}
+}
+@media print{.site-nav,.rep-pager,.site-foot{display:none!important}}
+</style>
+<style>
+/* ===== responsive layout system (RH-v3) =====
+   (1) nothing exceeds the viewport on any screen; (2) horizontal spacing is
+   fluid/viewport-driven (no hardcoded side padding) so the sticky section menu
+   always spans the full screen width; (3) icons are inline SVG that render on
+   every device. */
+
+/* Root-cause overflow fix: grid/flex items default to min-width:auto and refuse
+   to shrink below their content, letting wide tables/charts inflate the column
+   past the viewport. Allow them to shrink so inner scrollers take effect. */
+.article-grid{min-width:0}
+.article-grid > .toc,
+.article-grid > article{min-width:0;max-width:100%}
+article{min-width:0}
+.chart-fig,.chart-area,.h-bar-row,.h-bar-track,.bucket-row,.bucket-bar-track,
+.week-banner,.chart-legend,.dc-header,.stat-card{min-width:0}
+
+/* Wide tabular data scrolls within its own box — never widens the page */
+.pivot-table-wrapper,.table-wrapper{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* Velocity-chart hover tooltips/labels are centred on each bar and would spill
+   past the right edge on the last bars (they occupy layout even at opacity:0),
+   which was widening the page. Clip them horizontally; vertical stays visible. */
+.chart-area{overflow-x:clip}
+
+/* Media + long strings can never exceed their container */
+img,svg,canvas,video{max-width:100%;height:auto}
+.body-text,.lead-text,.article-title,.sec-h2,.chart-title,.chart-sub,
+.dc-name,.dc-investors,.week-banner-val,.stat-card-sub{overflow-wrap:anywhere}
+.inv-name{overflow-wrap:break-word}
+
+/* ----- fluid gutter: side spacing scales with the viewport (no fixed px) -----
+   page padding and the full-bleed section menu share one variable, so the menu
+   always reaches both screen edges at every size / resolution. */
+:root{--gutter:clamp(1.05rem, 5vw, 2rem)}
+.page-inner{padding-left:var(--gutter);padding-right:var(--gutter)}
+.site-nav-inner,.rep-pager,.site-foot .foot-inner{padding-left:var(--gutter);padding-right:var(--gutter)}
+
+/* ----- fluid component sizing: continuous with the viewport, not stepped ----- */
+.chart-fig{padding:clamp(1.15rem, 4.5vw, 2.5rem)}
+.h-bar-label{flex:0 0 clamp(68px, 22vw, 140px)}
+.h-bar-val{flex:0 0 clamp(46px, 14vw, 64px)}
+.h-bar-count{flex:0 0 clamp(34px, 11vw, 52px)}
+.bucket-label{flex:0 0 clamp(56px, 18vw, 110px)}
+.bucket-stats{flex:0 0 clamp(46px, 15vw, 90px)}
+.article-title{font-size:clamp(1.4rem, 6vw, 3.04rem)}
+.stat-card-value{font-size:clamp(1.3rem, 5vw, 1.6rem)}
+
+/* inline SVG icons — em-sized, inherit colour, render on every device */
+.ic{width:1em;height:1em;fill:currentColor;display:inline-block;vertical-align:-0.125em;flex:0 0 auto}
+
+/* ----- spacing & rhythm on tablet / phone ----- */
+@media (max-width:1023px){
+  .article-grid{gap:1.75rem}
+  .toc{margin:0 calc(-1*var(--gutter)) 0;padding:0 var(--gutter)}
+  .chart-fig{margin:2.25rem 0}
+  .section-divider{margin:2.75rem 0}
+}
+@media (max-width:600px){
+  /* Investor league table: fit all four columns — text wraps, never scrolls/clips */
+  .investor-table{table-layout:fixed;width:100%}
+  .investor-table td,.investor-table th{padding:8px 6px;overflow-wrap:break-word}
+  .investor-table th{letter-spacing:.05em}
+  .investor-table th:nth-child(1),.investor-table td:nth-child(1){width:32%}
+  .investor-table th:nth-child(2),.investor-table td:nth-child(2){width:16%}
+  .investor-table th:nth-child(3),.investor-table td:nth-child(3){width:28%}
+  .investor-table th:nth-child(4),.investor-table td:nth-child(4){width:24%}
+  .investor-table .inv-dot{width:6px;height:6px}
+  .inv-dot-row{gap:3px;overflow:hidden}
+  .chart-legend{gap:1rem;flex-wrap:wrap}
+  .legend-item{font-size:9px}
+}
+@media (max-width:420px){
+  .site-nav .nav-links{gap:.1rem}
+  .site-nav .nav-links a{padding:.5rem .45rem;font-size:9px;letter-spacing:.05em}
+  .site-foot .foot-links{flex-wrap:wrap;gap:.85rem}
+  .rep-pager .pg{padding:.85rem .9rem}
+}
+</style>
+
+

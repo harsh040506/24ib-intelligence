@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Forbidden · {{ brand }}{% endblock %}
+{% block content %}
+<div class="empty"><h3>403 — Forbidden</h3><p>You don't have permission for that. Ask an owner to upgrade your role.</p>
+<a class="btn btn-primary" style="margin-top:16px" href="{{ url_for('dashboard.home') }}">Go home</a></div>
+{% endblock %}

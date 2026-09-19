@@ -1,0 +1,96 @@
+# Weekly, unattended refresh of the 24IB intelligence site.
+#
+# Every Monday morning GitHub runs this on its own machine: it scrapes the
+# latest Inc42 funding data, builds any report that is now due, writes the
+# updated pages into 24IB-Private-Market-Research/, commits the new data back
+# into this repository, and publishes the site to GitHub Pages.
+#
+# Nobody has to be at a computer for any of this. It is free for public
+# repositories — GitHub does not meter Actions minutes on them.
+
+name: Weekly intelligence update
+
+on:
+  schedule:
+    # 04:30 UTC every Monday (= 10:00 IST). The ISO week being reported on runs
+    # Monday–Sunday, so by Monday morning the week just gone is complete and
+    # Inc42's weekend edition has been published.
+    #
+    # GitHub's cron is best-effort and can be delayed by up to an hour when the
+    # service is busy. That is irrelevant for a weekly report, but it is why you
+    # should not treat the exact minute as a guarantee.
+    - cron: "30 4 * * 1"
+
+  # Adds a "Run workflow" button in the Actions tab so you can trigger it by
+  # hand — used for the very first run, and any time you want an update early.
+  workflow_dispatch:
+
+permissions:
+  contents: write   # commit the refreshed database + site back into the repo
+  pages: write      # publish to GitHub Pages
+  id-token: write   # required by actions/deploy-pages
+
+# Never let two updates run at once — they would both try to write the database
+# and push, and the second would fail on a conflict.
+concurrency:
+  group: weekly-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Scrape, build and commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the repository (including the existing database)
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-ci.txt
+
+      - name: Install the Chromium browser the scraper drives
+        run: python -m playwright install --with-deps chromium
+
+      # This is the whole job in one line. The script scrapes Inc42, generates
+      # any report that is now due, publishes the affected pages, and mirrors
+      # the database back into the Excel master. It exits non-zero if anything
+      # failed — which fails this step, skips the commit and deploy below, and
+      # makes GitHub email you. The live site is left untouched in that case.
+      - name: Scrape Inc42, rebuild reports and publish the site
+        run: python scripts/weekly_update.py
+
+      - name: Commit the updated data and pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add instance 24IB-Private-Market-Research
+          if git diff --cached --quiet; then
+            echo "No new deals and no report changes — nothing to commit."
+          else
+            git commit -m "Weekly update — $(date -u +'%Y-%m-%d')"
+            git push
+          fi
+
+      - name: Package the site for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 24IB-Private-Market-Research
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: update          # only runs if everything above succeeded
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

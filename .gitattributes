@@ -1,2 +1,17 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Store and check out every file byte-for-byte — no line-ending conversion.
+#
+# This is deliberate and load-bearing. The static-site publisher controls the
+# exact bytes of every page it writes: it opens files with newline="" and
+# deliberately emits CRLF at three specific seams (see _wrap_report and _footer
+# in intelligence/publish.py) to match the reference markup. A published report
+# is therefore legitimately mixed — a handful of CRLF among hundreds of LF.
+#
+# Git's default "* text=auto" would normalise all of that to LF on commit and
+# convert back to native endings on checkout. The Linux machine that runs the
+# weekly update would then check out files that differ from what the publisher
+# produces, so every page would look modified on every run: constant churn in
+# the history, and committed content that no longer matches the app's output.
+#
+# "-text" disables the conversion entirely, which is what a project whose
+# generator owns its bytes actually wants.
+* -text
