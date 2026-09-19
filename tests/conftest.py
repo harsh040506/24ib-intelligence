@@ -30,6 +30,17 @@ def app(tmp_path, monkeypatch):
     # Disable the real history import so boot is instant and deterministic.
     monkeypatch.setattr("intelligence.ingestion.inc42.master_excel_path", lambda: None)
 
+    # Redirect the canonical workbook into the throwaway directory too. Stubbing
+    # master_excel_path only blocks the *read* path; the write path resolves
+    # canonical_master_path() from the app's instance folder, which is the real
+    # one. The ledger routes call sync_master_best_effort on every edit and
+    # delete, so without this a ledger test silently rewrites the live master
+    # with its own two throwaway rows.
+    monkeypatch.setattr(
+        "intelligence.ingestion.inc42.canonical_master_path",
+        lambda: tmp_path / "Inc42_Funding_Master_Data.xlsx",
+    )
+
     class TestConfig(Config):
         ENV = "testing"
         TESTING = True
